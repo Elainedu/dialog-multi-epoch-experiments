@@ -1,150 +1,137 @@
-# 我訓練 - 個人模型訓練實驗
+# dialog-multi-epoch-experiments
 
-個人進行的各種語言模型訓練實驗與測試。
+Multi-turn Chinese dialogue fine-tuning experiments across different training epochs, served through a Gradio chat UI.
 
-## 📋 專案概述
+## Overview
 
-本資料夾包含個人的模型訓練實驗，測試不同的預訓練策略、模型架構和資料集。
+This repository benchmarks BLOOM-family Chinese language models fine-tuned for
+multi-turn dialogue at different training durations (2, 3, and 5+5 epochs).
+Two Gradio front-ends are provided so the resulting checkpoints can be compared
+interactively side by side, with streaming token output and Simplified/
+Traditional Chinese conversion.
 
-## 🤖 訓練模型
+## Model / Approach
 
-### 1. my-pretrained-2epochs/
-- **訓練輪數**: 2 epochs
-- **模型大小**: ~600MB
-- **config.json**: 模型配置
-- **generation_config.json**: 生成參數配置
+Three checkpoints were produced from the same training pipeline, varying only
+the base model and the number of epochs:
 
-### 2. my-pretrained-3epochs-YeungNLP-zh-ch/
-- **訓練輪數**: 3 epochs
-- **基礎模型**: YeungNLP (繁體中文優化)
-- **壓縮包**: my-pretrained-3epochs-YeungNLP-zh-ch-20240108T101249Z-001.zip (689KB)
+| Checkpoint directory                        | Epochs | Base model                       | Language               |
+| ------------------------------------------- | ------ | -------------------------------- | ---------------------- |
+| `my-pretrained-2epochs/`                    | 2      | Langboat BLOOM                   | Simplified Chinese     |
+| `my-pretrained-3epochs-YeungNLP-zh-ch/`     | 3      | YeungNLP BLOOM                   | Traditional-optimised  |
+| `my-pretrained-5+5epochs-Langboat-zh-cn/`   | 5 + 5  | Langboat BLOOM (two-stage)       | Simplified Chinese     |
 
-### 3. my-pretrained-5+5epochs-Langboat-zh-cn/
-- **訓練輪數**: 5+5 epochs (兩階段訓練)
-- **基礎模型**: Langboat BLOOM (簡體中文)
+- Task: multi-turn dialogue generation (causal LM)
+- Prompt format: `Human: Q1\nAssistant: A1\nHuman: Q2\nAssistant: ...`
+- Training data: YeungNLP Simplified Chinese conversational corpus
+  (`NLP/train_dataset_YeungNLP*`) with ~16 MB train / ~241 KB validation splits
+- Training notebook: `NLP/w15-10-full-finetune-YeungNLP.ipynb`
+- Default generation parameters used in the demo:
+  `max_new_tokens=200`, `temperature=1.0`, `top_p=0.95`, `top_k=200`,
+  `repetition_penalty=1.2`
 
-## 🎨 Gradio 應用
+## Requirements
 
-### gradio.py (6.2KB)
-完整的對話應用，包含:
-- 簡繁體自動轉換 (OpenCC)
-- 串流輸出
-- 對話歷史管理
-- 可調整生成參數
-- 預設範例問題
+- Python 3.10+
+- PyTorch 2.0+
+- transformers 4.28+
+- gradio (Gradio 3/4 compatible)
+- accelerate, safetensors, sentencepiece
+- opencc-python-reimplemented (Simplified/Traditional conversion)
+- A CUDA GPU with ~2-4 GB VRAM is recommended; CPU inference works but is slow
 
-**主要功能**:
-```python
-- TextIteratorStreamer: 即時文字生成
-- StoppingCriteria: 自訂停止條件
-- 簡繁轉換: s2t / t2s
-- 參數調整: temperature, top_p, top_k, repetition_penalty
-```
+Install with:
 
-### 10-10-gradio-app-對話模式streaming.py (6.3KB)
-較新版本的 Gradio 應用，功能類似但有優化。
-
-## 📊 訓練資料 (NLP/)
-
-### YeungNLP 簡體中文資料集
-`NLP/train_dataset_YeungNLP簡體/`
-- **訓練集**: data_train/ (約 16MB)
-- **驗證集**: data_val/ (約 241KB)
-- **壓縮包**: train_dataset_YeungNLP簡體.zip (1.3MB)
-
-### 訓練 Notebook
-`NLP/w15-10-全微調-YeungNLP簡體.ipynb` (17KB)
-- YeungNLP 模型全微調流程
-- 簡體中文資料處理
-
-## 📦 依賴套件
-
-**requirements.txt** (1.5KB)
-```
-transformers
-torch
-gradio
-opencc-python-reimplemented
-sentencepiece
-accelerate
-```
-
-## 🚀 快速開始
-
-### 1. 安裝依賴
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 啟動 Gradio 介面
+## Quick Start
+
 ```bash
+# 1. Clone
+git clone https://github.com/Elainedu/dialog-multi-epoch-experiments.git
+cd dialog-multi-epoch-experiments
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. (Optional) Download or place a checkpoint under the repo root, e.g.
+#    ./my-pretrained-2epochs/
+#    Adjust the `model_name_or_path` variable inside the launcher script.
+
+# 4. Launch the Gradio demo
 python gradio.py
-# 或
-python 10-10-gradio-app-對話模式streaming.py
+# or the streaming variant
+python 10-10-gradio-chat-streaming.py
 ```
 
-### 3. 訓練新模型
-```bash
-cd NLP/
-jupyter notebook w15-10-全微調-YeungNLP簡體.ipynb
+The Gradio app defaults to `http://localhost:7860`.
+
+## Project Structure
+
+```
+dialog-multi-epoch-experiments/
+├── gradio.py                                # Chatbot UI with OpenCC + streaming
+├── 10-10-gradio-chat-streaming.py           # Streaming-focused variant (TextIteratorStreamer)
+├── requirements.txt
+├── NLP/
+│   ├── train_dataset_YeungNLP*/             # Train / val splits (Simplified Chinese)
+│   └── w15-10-full-finetune-YeungNLP.ipynb  # Full fine-tuning notebook
+├── my-pretrained-2epochs/                   # 2-epoch checkpoint (config only in git)
+├── my-pretrained-3epochs-YeungNLP-zh-ch/    # 3-epoch YeungNLP checkpoint
+├── my-pretrained-5+5epochs-Langboat-zh-cn/  # 5+5-epoch Langboat checkpoint
+├── configs/  data/  notebooks/  results/  src/
+└── README.md
 ```
 
-## ⚙️ Gradio 介面配置
+## Gradio UI
 
-### 預設範例問題
-- 介紹哈利波特
-- 各國首都問答
-- 披薩製作教學
-- 文章生成
-- 新聞標題生成
-- 機器學習演算法說明
+The chat interface exposes:
 
-### 可調參數
-- **max_new_tokens**: 200 (生成長度)
-- **temperature**: 1.0 (創造性)
-- **top_p**: 0.95 (核心採樣)
-- **top_k**: 200 (候選詞數量)
-- **repetition_penalty**: 1.2 (重複懲罰)
+- Conversation history as `[(user, bot), ...]` tuples, re-serialised into the
+  BLOOM prompt template on every turn
+- Streaming output via `TextIteratorStreamer` and a background generation
+  thread
+- Custom `StoppingCriteria` to cut generation at `Human:` / end-of-turn markers
+- Automatic Simplified <-> Traditional conversion (`s2t`, `t2s`) using OpenCC
+- Sliders for `max_new_tokens`, `temperature`, `top_p`, `top_k`,
+  `repetition_penalty`
+- Preset example prompts (Harry Potter intro, capitals quiz, pizza recipe,
+  article generation, news headlines, ML algorithm explanation)
 
-## 🔧 模型比較
+## Empirical Notes
 
-| 模型 | Epochs | 基礎模型 | 語言 | 大小 |
-|------|--------|---------|------|------|
-| my-pretrained-2epochs | 2 | Langboat | 簡體 | ~600MB |
-| my-pretrained-3epochs-YeungNLP | 3 | YeungNLP | 繁體 | ~600MB |
-| my-pretrained-5+5epochs-Langboat | 10 | Langboat | 簡體 | ~600MB |
+Informal observations across the three checkpoints:
 
-## 📝 訓練筆記
+1. **2 epochs** - basic conversational ability, occasional repetition.
+2. **3 epochs** - noticeably more fluent, fewer loops.
+3. **5+5 epochs** - most coherent responses.
 
-### 觀察結果
-1. **2 epochs**: 基本對話能力，有時會重複
-2. **3 epochs**: 更流暢，較少重複
-3. **5+5 epochs**: 最佳效果，回答更連貫
+Tips: raise `repetition_penalty` if the model loops, lower `temperature` for
+factual Q&A, and adjust `top_p` / `top_k` to trade off diversity vs.
+determinism.
 
-### 優化建議
-- 增加 repetition_penalty 減少重複
-- 調整 temperature 控制創造性
-- 使用 top_p 和 top_k 平衡多樣性
+## Notes
 
-## ⚠️ 注意事項
+- **Large files are not tracked in git.** The `my-pretrained-*/` weight files
+  (`pytorch_model.bin` / `model.safetensors`, ~600 MB each) are excluded.
+  To reproduce the demo you must either:
+  1. Re-run the notebook in `NLP/` to train a checkpoint yourself, or
+  2. Load a comparable base model from HuggingFace, e.g.
+     [`Langboat/bloom-389m-zh`](https://huggingface.co/Langboat/bloom-389m-zh)
+     or [`YeungNLP/bloom-1b1-zh`](https://huggingface.co/YeungNLP/bloom-1b1-zh),
+     and point `model_name_or_path` at it.
+- **Model path** in each launcher script must match the actual directory you
+  place under the repo root.
+- **CUDA is auto-detected.** With no GPU the demo falls back to CPU (much
+  slower); on GPU the model is loaded in FP16 to save VRAM.
+- **OpenCC** is required for the built-in Traditional/Simplified conversion -
+  make sure `opencc-python-reimplemented` installs cleanly.
 
-1. **模型路徑**: Gradio 腳本中的模型路徑需根據實際調整
-2. **簡繁轉換**: 確保安裝 opencc-python-reimplemented
-3. **GPU 記憶體**: 推理約需 2-4GB 顯存
-4. **CUDA**: 自動偵測，無 GPU 會使用 CPU (較慢)
+## License
 
-## 🎯 訓練目標
-
-- [x] 基礎對話能力
-- [x] 繁簡體中文支援
-- [x] Web 介面展示
-- [ ] 多輪對話記憶優化
-- [ ] 特定領域知識增強
-
-## 📂 測試記錄
-
-`test.ipynb/`: 各種測試與實驗（空資料夾）
-
----
-*訓練期間: 2023-12 ~ 2024-01*
-*最後更新: 2024-01-08*
+Educational use only. Base model weights follow the license of their upstream
+publishers (BLOOM RAIL License for BLOOM-derived checkpoints). The demo code
+in this repository may be freely used, modified, and redistributed for
+teaching and research.
