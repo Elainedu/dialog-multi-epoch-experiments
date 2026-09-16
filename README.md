@@ -61,9 +61,9 @@ pip install -r requirements.txt
 #    Adjust the `model_name_or_path` variable inside the launcher script.
 
 # 4. Launch the Gradio demo
-python gradio.py
+python app.py
 # or the streaming variant
-python 10-10-gradio-chat-streaming.py
+python chat_streaming.py
 ```
 
 The Gradio app defaults to `http://localhost:7860`.
@@ -72,8 +72,8 @@ The Gradio app defaults to `http://localhost:7860`.
 
 ```
 dialog-multi-epoch-experiments/
-├── gradio.py                                # Chatbot UI with OpenCC + streaming
-├── 10-10-gradio-chat-streaming.py           # Streaming-focused variant (TextIteratorStreamer)
+├── app.py                                   # Chatbot UI with OpenCC + streaming
+├── chat_streaming.py                        # Streaming-focused variant (TextIteratorStreamer)
 ├── requirements.txt
 ├── NLP/
 │   ├── train_dataset_YeungNLP*/             # Train / val splits (Simplified Chinese)
