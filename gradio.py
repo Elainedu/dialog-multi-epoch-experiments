@@ -1,3 +1,133 @@
+"""
+===============================================================================
+專案名稱: Multi-turn Dialogue System - 多輪對話系統
+===============================================================================
+
+[專案簡介]
+這是一個支援多輪對話的中文聊天機器人系統。系統可以記憶先前的對話內容，
+根據完整的對話歷史生成連貫的回應。使用 Gradio Chatbot 介面提供友好的
+對話體驗，並整合 OpenCC 進行繁簡轉換。
+
+[核心技術]
+- 模型: BLOOM-389M 預訓練模型（2 epochs 微調）
+- 任務類型: Multi-turn Dialogue Generation（多輪對話生成）
+- 深度學習框架: PyTorch + Transformers
+- Web 介面: Gradio Chatbot
+- 繁簡轉換: OpenCC
+
+[多輪對話原理]
+與單輪對話的差異:
+- 單輪: 每次回應只基於當前問題，無記憶
+- 多輪: 維護對話歷史，理解上下文關聯
+
+實作方式:
+1. 儲存所有歷史對話 [(user1, bot1), (user2, bot2), ...]
+2. 每次生成時，將完整歷史拼接成 prompt
+3. 格式: "Human: Q1\nAssistant: A1\nHuman: Q2\nAssistant: A2\nHuman: Q3\nAssistant:"
+4. 模型基於完整上下文生成新回應
+
+[技術特色]
+1. 上下文記憶: 記住之前說過的話，產生連貫對話
+2. 繁簡轉換: 自動處理簡體/繁體中文
+3. 停止條件: 自定義 stopping criteria 控制生成結束
+4. GPU 加速: 自動偵測並使用 GPU（如可用）
+5. Gradio Chatbot: 提供類似聊天應用的介面
+
+[啟動方式]
+基本啟動:
+    python gradio.py
+
+[使用說明]
+1. 啟動後開啟 http://127.0.0.1:7860
+2. 在輸入框輸入訊息
+3. 系統會基於對話歷史生成回應
+4. 繼續對話，系統會記住之前的內容
+5. 點擊「清除」可重置對話歷史
+
+[對話範例]
+User: 你好，請自我介紹
+Bot: 我是一個AI助手，很高興為您服務...
+
+User: 你剛才說你是什麼？（測試記憶）
+Bot: 我剛才說我是一個AI助手...（能記住前一句）
+
+User: 台灣有哪些景點？
+Bot: 台灣有很多景點，例如...
+
+User: 第一個景點怎麼去？（測試指代理解）
+Bot: 要去台北101的話...（理解"第一個"指前面提到的景點）
+
+[模型配置]
+- 模型路徑: ./my-pretrained-2epochs
+- 訓練: 基於 BLOOM-389M 微調 2 epochs
+- 精度: float16 (GPU) / float32 (CPU)
+- 最大生成長度: 根據對話歷史動態調整
+
+[OpenCC 繁簡轉換]
+系統整合 OpenCC 函式庫:
+- s2t: Simplified to Traditional（簡轉繁）
+- t2s: Traditional to Simplified（繁轉簡）
+
+用途:
+- 統一處理不同來源的中文文字
+- 確保模型輸入格式一致
+
+[Stopping Criteria]
+自定義停止條件，當生成到以下情況時結束:
+- 遇到 EOS (End of Sequence) token
+- 生成特定停止符號
+- 達到最大長度限制
+
+[面試展示重點]
+1. **多輪對話機制**: 解釋如何維護和使用對話歷史
+2. **上下文理解**: 展示系統能理解代詞指代和話題延續
+3. **記憶管理**: 討論長對話的記憶截斷策略
+4. **實際應用**:
+   - 客服機器人（需要記住客戶問題）
+   - 虛擬助手（連續任務指令）
+   - 教學輔助（根據先前回答調整解釋）
+5. **技術挑戰**:
+   - 對話歷史過長導致計算負擔
+   - 如何選擇性保留重要歷史
+   - 多輪對話的一致性維持
+
+[檔案結構]
+gradio.py                        # 本檔案 - 標準多輪對話介面
+10-10-gradio-chat-streaming.py  # 串流版本（即時輸出）
+my-pretrained-2epochs/           # 微調後的模型
+    ├── config.json
+    ├── pytorch_model.bin
+    └── tokenizer files
+
+[與串流版本的差異]
+gradio.py (標準版):
+- 等待完整生成後才顯示回應
+- 適合短回應
+
+10-10-gradio-chat-streaming.py (串流版):
+- 邊生成邊顯示（打字機效果）
+- 適合長回應，使用者體驗更好
+
+[訓練資訊]
+基礎模型: Langboat/bloom-389m-zh
+微調資料: 中文對話資料集
+訓練輪數: 2 epochs
+微調方法: 全量微調 (Full Fine-tuning)
+
+[對話歷史管理建議]
+實際應用時的優化策略:
+1. 滑動窗口: 只保留最近 N 輪對話
+2. 摘要壓縮: 將早期對話摘要化
+3. 關鍵資訊提取: 只保留重要的實體和事實
+4. Token 限制: 控制總 token 數在模型限制內
+
+[開發者]
+碩士班課程專案 - 深度學習（進階）
+建立日期: 2024
+
+===============================================================================
+"""
+
 import gradio as gr
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList, TextIteratorStreamer
